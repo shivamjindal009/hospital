@@ -1,4 +1,5 @@
 import tkinter as tk
+import sqlite3
 from functools import partial
 
 
@@ -14,7 +15,7 @@ doctorWindow = ""
 genderEntry = ""
 
 
-PD = open('Patient_Details','w')
+PD = open('Patient_Details_File','w')
 PD.close()
 
 
@@ -125,10 +126,43 @@ def DoctorWindow():
     ExitButton = tk.Button(doctorWindow, text='Exit', command=ExitApplication)
     ExitButton.grid(row=2, column=7)
     doctorWindow.protocol("WM_DELETE_WINDOW", mainWindow.destroy)
+
     doctorWindow.mainloop()
     
 
 def ExitApplication():
+    PD = open('Patient_Details_File','r')
+    Details = PD.readlines()
+    PD.close()
+    
+    connection = sqlite3.connect("Patient_Details_DataBase.db") 
+      # cursor  
+    crsr = connection.cursor() 
+    # SQL command to create a table in the database 
+    sql_command = """CREATE TABLE IF NOT EXISTS Patient_Detail (    
+    Patient_Name VARCHAR(20),
+    gender CHAR(1),
+    Age VARCHAR(3), 
+    Contact_number INTEGER PRIMARY KEY,
+    Address VARCHAR(100));"""
+  
+    # execute the statement 
+    crsr.execute(sql_command)
+    #put data in data base
+    for Detail in Details:
+        Detail = Detail.split('\n')
+        Detail = Detail[0].split('\t')
+        data = (Detail[0], Detail[1][0], Detail[2], int(Detail[3]), Detail[4])
+        sql_command = """INSERT INTO Patient_Detail VALUES (?, ?, ?, ?, ?);"""
+        crsr.execute(sql_command, data)
+        
+    #read from Patient_Details_DataBase.db
+    '''connection.commit()
+    crsr.execute("SELECT * FROM Patient_Detail")  
+    ans = crsr.fetchall()  
+    print(ans)'''
+    connection.close()
+
     mainWindow.destroy()
 
 
@@ -160,14 +194,14 @@ def VerifyDetails():
     genderEntered = gender
     if (ContactNumberEntered.strip().isnumeric()) and (len(ContactNumberEntered.strip()) == 10) and (ageEntered.strip().isnumeric()) and (AddressEntered.replace(' ','').isalnum()) and (NameEntered.replace(' ','').isalpha()) and (int(genderEntered) != 0):
         receptionWindow.destroy()
-        SaveInExcel()
+        SaveInTextFile()
     else:
         text = tk.Text(receptionWindow, height=1, width=30)
         text.grid(row=1, columnspan=2, sticky=tk.E+tk.W)
         text.insert(tk.END,'Invalid Details!!!')
 
 
-def SaveInExcel():
+def SaveInTextFile():
     global Name, Number, age, address, receptionWindow, gender
     
     if(gender == '1'):
@@ -179,7 +213,7 @@ def SaveInExcel():
     
     info = str(Name) + '\t' + str(gender) + '\t' + str(age) + '\t' + str(Number) + '\t' + str(address) + '\n'
     #print(detail)
-    PD = open('Patient_Details','a')
+    PD = open('Patient_Details_File','a')
     PD.write(info)
     PD.close()
     ReceptionWindow()
